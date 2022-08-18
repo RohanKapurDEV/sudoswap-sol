@@ -27,7 +27,8 @@ pub struct TradeNftPair<'info> {
     #[account(
         mut,
         seeds = [b"nft_account", pair.key().as_ref(), nft_token_mint.key().as_ref()],
-        bump
+        bump,
+        constraint = nft_token_vault.amount == 1
     )]
     pub nft_token_vault: Account<'info, TokenAccount>,
 
@@ -55,8 +56,13 @@ pub struct TradeNftPair<'info> {
         mut,
         constraint = user_quote_token_account.mint == quote_token_mint.key(),
         constraint = user_quote_token_account.owner == payer.key(),
+        constraint = user_quote_token_account.amount >= pair.spot_price,
     )]
     pub user_quote_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: PDA used as token account authority only
+    #[account(seeds = [b"program", b"signer"], bump)]
+    pub program_as_signer: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
@@ -90,5 +96,66 @@ impl<'info> TradeNftPair<'info> {
 }
 
 pub fn handler(ctx: Context<TradeNftPair>) -> Result<()> {
+    let pair = &mut ctx.accounts.pair;
+    let program_as_signer_bump = *ctx.bumps.get("program_as_signer").unwrap();
+
+    let transfer_quote_accounts = Transfer {
+        from: ctx.accounts.user_quote_token_account.to_account_info(),
+        to: ctx.accounts.quote_token_vault.to_account_info(),
+        authority: ctx.accounts.payer.to_account_info(),
+    };
+
+    let transfer_quote_ctx = CpiContext::new(
+        ctx.accounts.token_program.to_account_info(),
+        transfer_quote_accounts,
+    );
+
+    transfer(transfer_quote_ctx, pair.spot_price)?;
+
+    let transfer_nft_accounts = Transfer {
+        from: ctx.accounts.nft_token_vault.to_account_info(),
+        to: ctx.accounts.user_nft_token_account.to_account_info(),
+        authority: ctx.accounts.program_as_signer.to_account_info(),
+    };
+
+    let seeds = &[
+        "program".as_bytes(),
+        "signer".as_bytes(),
+        &[program_as_signer_bump],
+    ];
+
+    let signer = &[&seeds[..]];
+
+    let transfer_nft_ctx = CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info(),
+        transfer_nft_accounts,
+        signer,
+    );
+
+    transfer(transfer_nft_ctx, 1)?;
+
+    let bonding_curve = pair.bonding_curve;
+    let current_spot_price = pair.spot_price;
+
+    if bonding_curve == 0 {
+        let delta = pair.delta;
+
+        let new_spot_price = current_spot_price.checked_add(delta).unwrap();
+        pair.spot_price = new_spot_price;
+    } else {
+        let delta = pair.delta;
+
+        let sub = current_spot_price
+            .checked_mul(delta.checked_div(10000).unwrap())
+            .unwrap();
+
+        pair.spot_price = current_spot_price.checked_add(sub).unwrap();
+    }
+
+    pair.nfts_held = pair.nfts_held.checked_sub(1).unwrap();
+
+    if pair.nfts_held == 0 {
+        pair.is_active = false;
+    }
     Ok(())
 }
