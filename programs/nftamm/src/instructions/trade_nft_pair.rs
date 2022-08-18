@@ -95,6 +95,7 @@ impl<'info> TradeNftPair<'info> {
     }
 }
 
+#[access_control(TradeNftPair::accounts(&ctx))]
 pub fn handler(ctx: Context<TradeNftPair>) -> Result<()> {
     let pair = &mut ctx.accounts.pair;
     let program_as_signer_bump = *ctx.bumps.get("program_as_signer").unwrap();
