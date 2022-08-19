@@ -11,12 +11,12 @@ pub struct FundNftPair<'info> {
     pub pair: Account<'info, Pair>,
 
     #[account(constraint = nft_collection_mint.key() == pair.collection_mint)]
-    pub nft_collection_mint: Account<'info, Mint>,
+    pub nft_collection_mint: Box<Account<'info, Mint>>,
 
     /// CHECK: validated in access control logic
     pub nft_collection_metadata: UncheckedAccount<'info>,
 
-    pub nft_token_mint: Account<'info, Mint>,
+    pub nft_token_mint: Box<Account<'info, Mint>>,
 
     /// CHECK: validated in access control logic
     pub nft_token_metadata: UncheckedAccount<'info>,
@@ -55,9 +55,9 @@ impl<'info> FundNftPair<'info> {
         let collection_metadata = ctx.accounts.nft_collection_metadata.clone();
 
         validate_nft(
-            nft_token_mint,
+            *nft_token_mint,
             nft_token_metadata,
-            collection_mint,
+            *collection_mint,
             collection_metadata,
         )?;
 

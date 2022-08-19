@@ -14,12 +14,12 @@ pub struct TradeNftPair<'info> {
     pub pair: Account<'info, Pair>,
 
     #[account(constraint = nft_collection_mint.key() == pair.collection_mint)]
-    pub nft_collection_mint: Account<'info, Mint>,
+    pub nft_collection_mint: Box<Account<'info, Mint>>,
 
     /// CHECK: validated in access control logic
     pub nft_collection_metadata: UncheckedAccount<'info>,
 
-    pub nft_token_mint: Account<'info, Mint>,
+    pub nft_token_mint: Box<Account<'info, Mint>>,
 
     /// CHECK: validated in access control logic
     pub nft_token_metadata: UncheckedAccount<'info>,
@@ -31,7 +31,7 @@ pub struct TradeNftPair<'info> {
         constraint = nft_token_vault.amount == 1,
         constraint = nft_token_vault.owner == program_as_signer.key(),
     )]
-    pub nft_token_vault: Account<'info, TokenAccount>,
+    pub nft_token_vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init_if_needed,
@@ -39,10 +39,10 @@ pub struct TradeNftPair<'info> {
         associated_token::mint = nft_token_mint,
         associated_token::authority = payer,
     )]
-    pub user_nft_token_account: Account<'info, TokenAccount>,
+    pub user_nft_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(constraint = quote_token_mint.key() == pair.quote_token_mint)]
-    pub quote_token_mint: Account<'info, Mint>,
+    pub quote_token_mint: Box<Account<'info, Mint>>,
 
     #[account(
         mut,
@@ -51,7 +51,7 @@ pub struct TradeNftPair<'info> {
         constraint = quote_token_vault.key() == pair.quote_token_vault,
         constraint = quote_token_vault.mint == quote_token_mint.key(),
     )]
-    pub quote_token_vault: Account<'info, TokenAccount>,
+    pub quote_token_vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -59,7 +59,7 @@ pub struct TradeNftPair<'info> {
         constraint = user_quote_token_account.owner == payer.key(),
         constraint = user_quote_token_account.amount >= pair.spot_price,
     )]
-    pub user_quote_token_account: Account<'info, TokenAccount>,
+    pub user_quote_token_account: Box<Account<'info, TokenAccount>>,
 
     /// CHECK: PDA used as token account authority only
     #[account(seeds = [b"program", b"signer"], bump)]
@@ -86,9 +86,9 @@ impl<'info> TradeNftPair<'info> {
         let collection_metadata = ctx.accounts.nft_collection_metadata.clone();
 
         validate_nft(
-            nft_token_mint,
+            *nft_token_mint,
             nft_token_metadata,
-            collection_mint,
+            *collection_mint,
             collection_metadata,
         )?;
 

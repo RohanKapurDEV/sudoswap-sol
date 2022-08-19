@@ -33,7 +33,7 @@ pub struct SwapTokenTradePair<'info> {
         constraint = nft_token_vault.amount == 1,
         constraint = nft_token_vault.owner == program_as_signer.key(),
     )]
-    pub nft_token_vault: Account<'info, TokenAccount>,
+    pub nft_token_vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init_if_needed,
@@ -41,7 +41,7 @@ pub struct SwapTokenTradePair<'info> {
         associated_token::mint = nft_token_mint,
         associated_token::authority = payer,
     )]
-    pub user_nft_token_account: Account<'info, TokenAccount>,
+    pub user_nft_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(constraint = quote_token_mint.key() == pair.quote_token_mint)]
     pub quote_token_mint: Account<'info, Mint>,
@@ -54,7 +54,7 @@ pub struct SwapTokenTradePair<'info> {
         constraint = quote_token_vault.mint == quote_token_mint.key(),
         constraint = quote_token_vault.owner == program_as_signer.key(),
     )]
-    pub quote_token_vault: Account<'info, TokenAccount>,
+    pub quote_token_vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -64,7 +64,7 @@ pub struct SwapTokenTradePair<'info> {
         constraint = quote_fee_vault.mint == quote_token_mint.key(),
         constraint = quote_fee_vault.owner == program_as_signer.key(),
     )]
-    pub quote_fee_vault: Account<'info, TokenAccount>,
+    pub quote_fee_vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -72,7 +72,7 @@ pub struct SwapTokenTradePair<'info> {
         constraint = user_quote_token_account.owner == payer.key(),
         constraint = user_quote_token_account.amount >= pair.spot_price,
     )]
-    pub user_quote_token_account: Account<'info, TokenAccount>,
+    pub user_quote_token_account: Box<Account<'info, TokenAccount>>,
 
     /// CHECK: PDA used as token account authority only
     #[account(seeds = [b"program", b"signer"], bump)]
