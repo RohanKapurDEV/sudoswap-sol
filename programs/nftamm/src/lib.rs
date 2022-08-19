@@ -48,4 +48,8 @@ pub mod nftamm {
     pub fn trade_nft_pair(ctx: Context<TradeNftPair>) -> Result<()> {
         instructions::trade_nft_pair::handler(ctx)
     }
+
+    pub fn swap_token_trade_pair(ctx: Context<SwapTokenTradePair>) -> Result<()> {
+        instructions::swap_token_trade_pair::handler(ctx)
+    }
 }
