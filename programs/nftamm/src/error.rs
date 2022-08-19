@@ -32,6 +32,8 @@ pub enum ProgramError {
     PairNotActive,
     #[msg("fee param must be between 0 and 10000")]
     InvalidFee,
+    #[msg("delta param must be between 0 and 10000 for bonding curve 1")]
+    InvalidDelta,
     #[msg("Fee too large")]
     FeeTooLarge,
 }
