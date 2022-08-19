@@ -28,7 +28,8 @@ pub struct TradeNftPair<'info> {
         mut,
         seeds = [b"nft_account", pair.key().as_ref(), nft_token_mint.key().as_ref()],
         bump,
-        constraint = nft_token_vault.amount == 1
+        constraint = nft_token_vault.amount == 1,
+        constraint = nft_token_vault.owner == program_as_signer.key(),
     )]
     pub nft_token_vault: Account<'info, TokenAccount>,
 
@@ -146,14 +147,17 @@ pub fn handler(ctx: Context<TradeNftPair>) -> Result<()> {
     } else {
         let delta = pair.delta;
 
-        let sub = current_spot_price
-            .checked_mul(delta.checked_div(10000).unwrap())
+        let add = current_spot_price
+            .checked_mul(delta as u64)
+            .unwrap()
+            .checked_div(10000)
             .unwrap();
 
-        pair.spot_price = current_spot_price.checked_add(sub).unwrap();
+        pair.spot_price = current_spot_price.checked_add(add).unwrap();
     }
 
     pair.nfts_held = pair.nfts_held.checked_sub(1).unwrap();
+    pair.trade_count = pair.trade_count.checked_add(1).unwrap();
 
     if pair.nfts_held == 0 {
         pair.is_active = false;

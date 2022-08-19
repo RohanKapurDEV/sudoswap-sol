@@ -105,6 +105,12 @@ pub fn handler(
         return Err(ProgramError::InvalidFee.into());
     }
 
+    if bonding_curve == 1 {
+        if delta > 10000 {
+            return Err(ProgramError::InvalidDelta.into());
+        }
+    }
+
     let pair = &mut ctx.accounts.pair;
 
     pair.owner = ctx.accounts.payer.key();

@@ -135,7 +135,20 @@ pub fn handler(ctx: Context<SwapTokenTradePair>) -> Result<()> {
         transfer_quote_accounts,
     );
 
-    transfer(transfer_quote_ctx, pair.spot_price + fee_applied)?;
+    transfer(transfer_quote_ctx, pair.spot_price)?;
+
+    let transfer_fee_accounts = Transfer {
+        from: ctx.accounts.user_quote_token_account.to_account_info(),
+        to: ctx.accounts.quote_fee_vault.to_account_info(),
+        authority: ctx.accounts.payer.to_account_info(),
+    };
+
+    let transfer_fee_ctx = CpiContext::new(
+        ctx.accounts.token_program.to_account_info(),
+        transfer_fee_accounts,
+    );
+
+    transfer(transfer_fee_ctx, fee_applied)?;
 
     let transfer_nft_accounts = Transfer {
         from: ctx.accounts.nft_token_vault.to_account_info(),

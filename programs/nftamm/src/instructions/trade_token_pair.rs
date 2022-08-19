@@ -150,14 +150,16 @@ pub fn handler(ctx: Context<TradeTokenPair>) -> Result<()> {
     } else {
         let delta = pair.delta;
 
-        let sub = current_spot_price
-            .checked_mul(delta.checked_div(10000).unwrap())
+        // this is a very naive calculation, fix it later
+        let new_spot_price = current_spot_price
+            .checked_div(delta.checked_div(10000).unwrap().checked_add(1).unwrap())
             .unwrap();
 
-        pair.spot_price = current_spot_price.checked_sub(sub).unwrap();
+        pair.spot_price = new_spot_price;
     }
 
     pair.nfts_held = pair.nfts_held.checked_add(1).unwrap();
+    pair.trade_count = pair.trade_count.checked_add(1).unwrap();
 
     let quote_token_vault = &mut ctx.accounts.quote_token_vault;
 
