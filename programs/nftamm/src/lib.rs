@@ -56,4 +56,16 @@ pub mod nftamm {
     pub fn swap_nft_trade_pair(ctx: Context<SwapNftTradePair>) -> Result<()> {
         instructions::swap_nft_trade_pair::handler(ctx)
     }
+
+    pub fn change_delta(ctx: Context<ChangeDelta>, new_delta: u64) -> Result<()> {
+        instructions::change_delta::handler(ctx, new_delta)
+    }
+
+    pub fn change_fee(ctx: Context<ChangeFee>, new_fee: u16) -> Result<()> {
+        instructions::change_fee::handler(ctx, new_fee)
+    }
+
+    pub fn change_spot_price(ctx: Context<ChangeSpotPrice>, new_spot_price: u64) -> Result<()> {
+        instructions::change_spot_price::handler(ctx, new_spot_price)
+    }
 }
