@@ -36,4 +36,12 @@ pub enum ProgramError {
     InvalidDelta,
     #[msg("Fee too large")]
     FeeTooLarge,
+    #[msg("Invalid mint")]
+    InvalidMint,
+    #[msg("Invalid quote token vault key")]
+    InvalidQuoteTokenVault,
+    #[msg("This token account does not have sufficient balance")]
+    InsufficientBalance,
+    #[msg("Invalid fee vault")]
+    InvalidFeeVault,
 }

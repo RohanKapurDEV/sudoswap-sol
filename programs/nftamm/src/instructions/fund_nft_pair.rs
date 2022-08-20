@@ -10,7 +10,7 @@ pub struct FundNftPair<'info> {
     #[account(mut)]
     pub pair: Account<'info, Pair>,
 
-    #[account(constraint = nft_collection_mint.key() == pair.collection_mint)]
+    #[account(constraint = nft_collection_mint.key() == pair.collection_mint @ ProgramError::InvalidCollectionMint)]
     pub nft_collection_mint: Box<Account<'info, Mint>>,
 
     /// CHECK: validated in access control logic
@@ -23,7 +23,7 @@ pub struct FundNftPair<'info> {
 
     #[account(
         mut,
-        constraint = owner_nft_token_account.mint == nft_token_mint.key()
+        constraint = owner_nft_token_account.mint == nft_token_mint.key() @ ProgramError::InvalidMint,
     )]
     pub owner_nft_token_account: Account<'info, TokenAccount>,
 

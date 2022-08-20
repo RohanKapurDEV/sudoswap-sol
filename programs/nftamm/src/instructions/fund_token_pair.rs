@@ -18,17 +18,17 @@ pub struct FundTokenPair<'info> {
         mut,
         seeds = [b"quote", pair.key().as_ref()],
         bump,
-        constraint = quote_token_vault.mint == quote_token_mint.key(),
-        constraint = quote_token_vault.owner == program_as_signer.key(),
-        constraint = quote_token_vault.key() == pair.quote_token_vault,
+        constraint = quote_token_vault.mint == quote_token_mint.key() @ ProgramError::InvalidMint,
+        constraint = quote_token_vault.owner == program_as_signer.key() @ ProgramError::InvalidOwner,
+        constraint = quote_token_vault.key() == pair.quote_token_vault @ ProgramError::InvalidQuoteTokenVault,
     )]
     pub quote_token_vault: Account<'info, TokenAccount>,
 
     #[account(
         mut,
-        constraint = owner_quote_token_account.owner == payer.key(),
-        constraint = owner_quote_token_account.mint == quote_token_mint.key(),
-        constraint = owner_quote_token_account.amount >= pair.spot_price, // Make sure that the owner is well funded for the payment
+        constraint = owner_quote_token_account.owner == payer.key() @ ProgramError::InvalidOwner,
+        constraint = owner_quote_token_account.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
+        constraint = owner_quote_token_account.amount >= pair.spot_price @ ProgramError::InsufficientBalance,
     )]
     pub owner_quote_token_account: Account<'info, TokenAccount>,
 

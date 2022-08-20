@@ -12,10 +12,13 @@ pub struct SwapNftTradePair<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    #[account(mut, constraint = pair.pair_type == 2)]
+    #[account(
+        mut,
+        constraint = pair.pair_type == 2 @ ProgramError::InvalidPairType,
+    )]
     pub pair: Account<'info, Pair>,
 
-    #[account(constraint = nft_collection_mint.key() == pair.collection_mint)]
+    #[account(constraint = nft_collection_mint.key() == pair.collection_mint @ ProgramError::InvalidMint)]
     pub nft_collection_mint: Account<'info, Mint>,
 
     /// CHECK: validated in access control logic
@@ -38,9 +41,9 @@ pub struct SwapNftTradePair<'info> {
 
     #[account(
         mut,
-        constraint = user_nft_token_account.mint == nft_token_mint.key(),
-        constraint = user_nft_token_account.owner == payer.key(),
-        constraint = user_nft_token_account.amount == 1,
+        constraint = user_nft_token_account.mint == nft_token_mint.key() @ ProgramError::InvalidMint,
+        constraint = user_nft_token_account.owner == payer.key() @ ProgramError::InvalidOwner,
+        constraint = user_nft_token_account.amount == 1 @ ProgramError::InsufficientBalance,
     )]
     pub user_nft_token_account: Box<Account<'info, TokenAccount>>,
 
@@ -51,9 +54,9 @@ pub struct SwapNftTradePair<'info> {
         mut,
         seeds = [b"quote", pair.key().as_ref()],
         bump,
-        constraint = quote_token_vault.key() == pair.quote_token_vault,
-        constraint = quote_token_vault.mint == quote_token_mint.key(),
-        constraint = quote_token_vault.owner == program_as_signer.key(),
+        constraint = quote_token_vault.key() == pair.quote_token_vault @ ProgramError::InvalidQuoteTokenVault,
+        constraint = quote_token_vault.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
+        constraint = quote_token_vault.owner == program_as_signer.key() @ ProgramError::InvalidOwner,
     )]
     pub quote_token_vault: Box<Account<'info, TokenAccount>>,
 
@@ -61,9 +64,9 @@ pub struct SwapNftTradePair<'info> {
         mut,
         seeds = [b"quote", pair.key().as_ref()],
         bump,
-        constraint = quote_fee_vault.key() == pair.fee_vault,
-        constraint = quote_fee_vault.mint == quote_token_mint.key(),
-        constraint = quote_fee_vault.owner == program_as_signer.key(),
+        constraint = quote_fee_vault.key() == pair.fee_vault @ ProgramError::InvalidFeeVault ,
+        constraint = quote_fee_vault.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
+        constraint = quote_fee_vault.owner == program_as_signer.key() @ ProgramError::InvalidOwner,
     )]
     pub quote_fee_vault: Box<Account<'info, TokenAccount>>,
 

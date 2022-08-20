@@ -12,10 +12,13 @@ pub struct SwapTokenTradePair<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    #[account(mut, constraint = pair.pair_type == 2)]
+    #[account(
+        mut,
+        constraint = pair.pair_type == 2 @ ProgramError::InvalidPairType,
+    )]
     pub pair: Account<'info, Pair>,
 
-    #[account(constraint = nft_collection_mint.key() == pair.collection_mint)]
+    #[account(constraint = nft_collection_mint.key() == pair.collection_mint @ ProgramError::InvalidMint)]
     pub nft_collection_mint: Account<'info, Mint>,
 
     /// CHECK: validated in access control logic
@@ -30,8 +33,8 @@ pub struct SwapTokenTradePair<'info> {
         mut,
         seeds = [b"nft_account", pair.key().as_ref(), nft_token_mint.key().as_ref()],
         bump,
-        constraint = nft_token_vault.amount == 1,
-        constraint = nft_token_vault.owner == program_as_signer.key(),
+        constraint = nft_token_vault.amount == 1 @ ProgramError::InsufficientBalance,
+        constraint = nft_token_vault.owner == program_as_signer.key() @ ProgramError::InvalidOwner,
     )]
     pub nft_token_vault: Box<Account<'info, TokenAccount>>,
 
@@ -43,16 +46,16 @@ pub struct SwapTokenTradePair<'info> {
     )]
     pub user_nft_token_account: Box<Account<'info, TokenAccount>>,
 
-    #[account(constraint = quote_token_mint.key() == pair.quote_token_mint)]
+    #[account(constraint = quote_token_mint.key() == pair.quote_token_mint @ ProgramError::InvalidQuoteTokenMint)]
     pub quote_token_mint: Account<'info, Mint>,
 
     #[account(
         mut,
         seeds = [b"quote", pair.key().as_ref()],
         bump,
-        constraint = quote_token_vault.key() == pair.quote_token_vault,
-        constraint = quote_token_vault.mint == quote_token_mint.key(),
-        constraint = quote_token_vault.owner == program_as_signer.key(),
+        constraint = quote_token_vault.key() == pair.quote_token_vault @ ProgramError::InvalidQuoteTokenVault,
+        constraint = quote_token_vault.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
+        constraint = quote_token_vault.owner == program_as_signer.key() @ ProgramError::InvalidOwner,
     )]
     pub quote_token_vault: Box<Account<'info, TokenAccount>>,
 
@@ -60,17 +63,17 @@ pub struct SwapTokenTradePair<'info> {
         mut,
         seeds = [b"quote", pair.key().as_ref()],
         bump,
-        constraint = quote_fee_vault.key() == pair.fee_vault,
-        constraint = quote_fee_vault.mint == quote_token_mint.key(),
-        constraint = quote_fee_vault.owner == program_as_signer.key(),
+        constraint = quote_fee_vault.key() == pair.fee_vault @ ProgramError::InvalidFeeVault,
+        constraint = quote_fee_vault.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
+        constraint = quote_fee_vault.owner == program_as_signer.key() @ ProgramError::InvalidOwner,
     )]
     pub quote_fee_vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
-        constraint = user_quote_token_account.mint == quote_token_mint.key(),
-        constraint = user_quote_token_account.owner == payer.key(),
-        constraint = user_quote_token_account.amount >= pair.spot_price,
+        constraint = user_quote_token_account.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
+        constraint = user_quote_token_account.owner == payer.key() @ ProgramError::InvalidOwner,
+        constraint = user_quote_token_account.amount >= pair.spot_price @ ProgramError::InsufficientBalance,
     )]
     pub user_quote_token_account: Box<Account<'info, TokenAccount>>,
 
