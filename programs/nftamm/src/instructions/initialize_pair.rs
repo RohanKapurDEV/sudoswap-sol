@@ -20,11 +20,11 @@ pub struct InitializePair<'info> {
     pub pair_authority: Account<'info, PairAuthority>,
 
     /// CHECK: validated in access control logic
-    pub nft_collection_mint: Account<'info, Mint>,
+    pub nft_collection_mint: Box<Account<'info, Mint>>,
     /// CHECK: validated in access control logic
     pub nft_collection_metadata: UncheckedAccount<'info>,
 
-    pub quote_token_mint: Account<'info, Mint>,
+    pub quote_token_mint: Box<Account<'info, Mint>>,
 
     #[account(
         init,
