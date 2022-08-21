@@ -44,4 +44,6 @@ pub enum ProgramError {
     InsufficientBalance,
     #[msg("Invalid fee vault")]
     InvalidFeeVault,
+    #[msg("Fee must be between 0 and 10000")]
+    InvalidFees,
 }

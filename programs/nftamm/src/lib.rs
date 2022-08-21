@@ -13,6 +13,13 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod nftamm {
     use super::*;
 
+    pub fn initialize_pair_authority(
+        ctx: Context<InitializePairAuthority>,
+        fees: u16,
+    ) -> Result<()> {
+        instructions::initialize_pair_authority::handler(ctx, fees)
+    }
+
     pub fn initialize_pair(
         ctx: Context<InitializePair>,
         pair_type: u8,
