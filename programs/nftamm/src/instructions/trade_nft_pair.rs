@@ -1,4 +1,4 @@
-use crate::{error::ProgramError, state::Pair, utils::*};
+use crate::{error::ProgramError, state::*, utils::*};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -12,6 +12,19 @@ pub struct TradeNftPair<'info> {
 
     #[account(mut, constraint = pair.pair_type == 1)]
     pub pair: Account<'info, Pair>,
+
+    #[account(
+        constraint = pair_owner.key() == pair.owner @ ProgramError::InvalidOwner,
+    )]
+    pub pair_owner: UncheckedAccount<'info>,
+
+    #[account(
+        mut,
+        close = pair_owner,
+        seeds = [b"pair_metadata", pair.key().as_ref(), nft_token_mint.key().as_ref()],
+        bump
+    )]
+    pub pair_metadata: Account<'info, PairMetadata>,
 
     #[account(constraint = nft_collection_mint.key() == pair.collection_mint)]
     pub nft_collection_mint: Box<Account<'info, Mint>>,
