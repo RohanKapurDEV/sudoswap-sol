@@ -1,6 +1,7 @@
 pub mod change_delta;
 pub mod change_fee;
 pub mod change_spot_price;
+pub mod close_pair;
 pub mod fund_nft_pair;
 pub mod fund_token_pair;
 pub mod initialize_pair;
@@ -15,6 +16,7 @@ pub mod withdraw_quote_token;
 pub use change_delta::*;
 pub use change_fee::*;
 pub use change_spot_price::*;
+pub use close_pair::*;
 pub use fund_nft_pair::*;
 pub use fund_token_pair::*;
 pub use initialize_pair::*;

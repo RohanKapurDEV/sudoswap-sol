@@ -75,4 +75,8 @@ pub mod nftamm {
     pub fn change_spot_price(ctx: Context<ChangeSpotPrice>, new_spot_price: u64) -> Result<()> {
         instructions::change_spot_price::handler(ctx, new_spot_price)
     }
+
+    pub fn close_pair(ctx: Context<ClosePair>) -> Result<()> {
+        instructions::close_pair::handler(ctx)
+    }
 }

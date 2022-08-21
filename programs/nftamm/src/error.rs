@@ -46,4 +46,6 @@ pub enum ProgramError {
     InvalidFeeVault,
     #[msg("Fee must be between 0 and 10000")]
     InvalidFees,
+    #[msg("Cannot close pair account because it still holds nfts. Please withdraw all nfts first")]
+    StillHoldsNfts,
 }
