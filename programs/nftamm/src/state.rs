@@ -13,6 +13,7 @@ impl PairAuthority {
 
 #[account]
 pub struct Pair {
+    pub pair_authority: Pubkey,
     pub owner: Pubkey,
     pub collection_mint: Pubkey,
     pub quote_token_mint: Pubkey,
@@ -31,7 +32,7 @@ pub struct Pair {
 
 impl Pair {
     // Pubkeys + u64s + u32s + u8s + bools
-    pub const SIZE: usize = (32 * 5) + (8 * 4) + (4 * 1) + (1 * 2) + (1 * 2);
+    pub const SIZE: usize = (32 * 6) + (8 * 4) + (4 * 1) + (1 * 2) + (1 * 2);
 }
 
 #[account]
@@ -39,6 +40,7 @@ pub struct PairMetadata {
     pub pair: Pubkey,
     pub token_mint: Pubkey,
     pub collection_mint: Pubkey,
+    pub token_account: Pubkey,
 }
 
 impl PairMetadata {
