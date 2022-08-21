@@ -13,7 +13,9 @@ pub struct TradeNftPair<'info> {
     #[account(mut, constraint = pair.pair_type == 1)]
     pub pair: Account<'info, Pair>,
 
+    /// CHECK: only used as close target for pair_metadata
     #[account(
+        mut,
         constraint = pair_owner.key() == pair.owner @ ProgramError::InvalidOwner,
     )]
     pub pair_owner: UncheckedAccount<'info>,

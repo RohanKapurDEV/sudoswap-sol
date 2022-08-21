@@ -20,6 +20,7 @@ pub struct SwapTokenTradePair<'info> {
 
     /// CHECK: only used as close target for pair_metadata
     #[account(
+        mut,
         constraint = pair_owner.key() == pair.owner @ ProgramError::InvalidOwner,
     )]
     pub pair_owner: UncheckedAccount<'info>,
