@@ -1,4 +1,8 @@
-use crate::{error::ProgramError, state::Pair, utils::*};
+use crate::{
+    error::ProgramError,
+    state::{Pair, PairMetadata},
+    utils::*,
+};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
 
@@ -9,6 +13,15 @@ pub struct FundNftPair<'info> {
 
     #[account(mut)]
     pub pair: Account<'info, Pair>,
+
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + PairMetadata::SIZE,
+        seeds = [b"pair_metadata", pair.key().as_ref(), nft_token_mint.key().as_ref()],
+        bump
+    )]
+    pub pair_metadata: Account<'info, PairMetadata>,
 
     #[account(constraint = nft_collection_mint.key() == pair.collection_mint @ ProgramError::InvalidCollectionMint)]
     pub nft_collection_mint: Box<Account<'info, Mint>>,
@@ -32,8 +45,6 @@ pub struct FundNftPair<'info> {
         payer = payer,
         token::mint = nft_token_mint,
         token::authority = program_as_signer,
-        seeds = [b"nft_account", pair.key().as_ref(), nft_token_mint.key().as_ref()],
-        bump
     )]
     pub nft_token_vault: Account<'info, TokenAccount>,
 
@@ -68,6 +79,7 @@ impl<'info> FundNftPair<'info> {
 #[access_control(FundNftPair::accounts(&ctx))]
 pub fn handler(ctx: Context<FundNftPair>) -> Result<()> {
     let pair = &mut ctx.accounts.pair;
+    let pair_metadata = &mut ctx.accounts.pair_metadata;
 
     // This can be called on nft pairs or trade pairs
     if pair.pair_type != 1 || pair.pair_type != 2 {
@@ -93,6 +105,10 @@ pub fn handler(ctx: Context<FundNftPair>) -> Result<()> {
 
     let current_held = pair.nfts_held;
     pair.nfts_held = current_held.checked_add(1).unwrap();
+
+    pair_metadata.pair = pair.key();
+    pair_metadata.token_mint = ctx.accounts.nft_token_mint.key();
+    pair_metadata.collection_mint = ctx.accounts.nft_collection_mint.key();
 
     Ok(())
 }
