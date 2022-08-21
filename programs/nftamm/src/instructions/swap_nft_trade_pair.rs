@@ -1,4 +1,4 @@
-use crate::{error::ProgramError, state::Pair, utils::*};
+use crate::{error::ProgramError, state::*, utils::*};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -18,6 +18,15 @@ pub struct SwapNftTradePair<'info> {
     )]
     pub pair: Account<'info, Pair>,
 
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + PairMetadata::SIZE,
+        seeds = [b"pair_metadata", pair.key().as_ref(), nft_token_mint.key().as_ref()],
+        bump
+    )]
+    pub pair_metadata: Account<'info, PairMetadata>,
+
     #[account(constraint = nft_collection_mint.key() == pair.collection_mint @ ProgramError::InvalidMint)]
     pub nft_collection_mint: Account<'info, Mint>,
 
@@ -34,8 +43,6 @@ pub struct SwapNftTradePair<'info> {
         payer = payer,
         token::mint = nft_token_mint,
         token::authority = program_as_signer,
-        seeds = [b"nft_account", pair.key().as_ref(), nft_token_mint.key().as_ref()],
-        bump,
     )]
     pub nft_token_vault: Box<Account<'info, TokenAccount>>,
 
@@ -116,6 +123,7 @@ impl<'info> SwapNftTradePair<'info> {
 #[access_control(SwapNftTradePair::accounts(&ctx))]
 pub fn handler(ctx: Context<SwapNftTradePair>) -> Result<()> {
     let pair = &mut ctx.accounts.pair;
+    let pair_metadata = &mut ctx.accounts.pair_metadata;
     let program_as_signer_bump = *ctx.bumps.get("program_as_signer").unwrap();
 
     let fee = pair.fee;
@@ -186,6 +194,10 @@ pub fn handler(ctx: Context<SwapNftTradePair>) -> Result<()> {
 
     pair.nfts_held = pair.nfts_held.checked_add(1).unwrap();
     pair.trade_count = pair.trade_count.checked_add(1).unwrap();
+
+    pair_metadata.token_mint = ctx.accounts.nft_token_mint.key();
+    pair_metadata.collection_mint = ctx.accounts.nft_collection_mint.key();
+    pair_metadata.token_account = ctx.accounts.nft_token_vault.key();
 
     Ok(())
 }
