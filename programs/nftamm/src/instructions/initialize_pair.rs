@@ -1,4 +1,4 @@
-use crate::error::ProgramError;
+use crate::{error::ProgramError, state::PairAuthority};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 use mpl_token_metadata::state::{Metadata, TokenMetadataAccount};
@@ -16,6 +16,8 @@ pub struct InitializePair<'info> {
         space = 8 + Pair::SIZE
     )]
     pub pair: Account<'info, Pair>,
+
+    pub pair_authority: Account<'info, PairAuthority>,
 
     /// CHECK: validated in access control logic
     pub nft_collection_mint: Account<'info, Mint>,
@@ -113,6 +115,7 @@ pub fn handler(
 
     let pair = &mut ctx.accounts.pair;
 
+    pair.pair_authority = ctx.accounts.pair_authority.key();
     pair.owner = ctx.accounts.payer.key();
     pair.collection_mint = ctx.accounts.nft_collection_mint.key();
     pair.quote_token_mint = ctx.accounts.quote_token_mint.key();
