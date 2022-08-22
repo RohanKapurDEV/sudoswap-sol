@@ -13,6 +13,7 @@ pub struct TradeTokenPair<'info> {
     #[account(constraint = pair_authority.key() == pair.pair_authority @ ProgramError::InvalidPairAuthority)]
     pub pair_authority: Account<'info, PairAuthority>,
 
+    /// CHECK: only used as authority target for pair_authority_quote_token_account
     #[account(
         constraint = current_authority.key() == pair_authority.current_authority @ ProgramError::InvalidCurrentAuthority,
     )]

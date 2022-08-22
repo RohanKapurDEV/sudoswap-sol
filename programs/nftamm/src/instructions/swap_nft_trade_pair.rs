@@ -12,6 +12,23 @@ pub struct SwapNftTradePair<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    #[account(constraint = pair_authority.key() == pair.pair_authority @ ProgramError::InvalidPairAuthority)]
+    pub pair_authority: Account<'info, PairAuthority>,
+
+    /// CHECK: only used as authority target for pair_authority_quote_token_account
+    #[account(
+        constraint = current_authority.key() == pair_authority.current_authority @ ProgramError::InvalidCurrentAuthority,
+    )]
+    pub current_authority: UncheckedAccount<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = payer,
+        associated_token::mint = quote_token_mint,
+        associated_token::authority = current_authority
+    )]
+    pub pair_authority_quote_token_account: Box<Account<'info, TokenAccount>>,
+
     #[account(
         mut,
         constraint = pair.pair_type == 2 @ ProgramError::InvalidPairType,
@@ -28,12 +45,12 @@ pub struct SwapNftTradePair<'info> {
     pub pair_metadata: Account<'info, PairMetadata>,
 
     #[account(constraint = nft_collection_mint.key() == pair.collection_mint @ ProgramError::InvalidMint)]
-    pub nft_collection_mint: Account<'info, Mint>,
+    pub nft_collection_mint: Box<Account<'info, Mint>>,
 
     /// CHECK: validated in access control logic
     pub nft_collection_metadata: UncheckedAccount<'info>,
 
-    pub nft_token_mint: Account<'info, Mint>,
+    pub nft_token_mint: Box<Account<'info, Mint>>,
 
     /// CHECK: validated in access control logic
     pub nft_token_metadata: UncheckedAccount<'info>,
@@ -55,7 +72,7 @@ pub struct SwapNftTradePair<'info> {
     pub user_nft_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(constraint = quote_token_mint.key() == pair.quote_token_mint)]
-    pub quote_token_mint: Account<'info, Mint>,
+    pub quote_token_mint: Box<Account<'info, Mint>>,
 
     #[account(
         mut,
@@ -98,6 +115,22 @@ pub struct SwapNftTradePair<'info> {
 impl<'info> SwapNftTradePair<'info> {
     fn accounts(ctx: &Context<SwapNftTradePair>) -> Result<()> {
         let pair = ctx.accounts.pair.clone();
+        let pair_authority = ctx.accounts.pair_authority.clone();
+
+        let pair_authority_fees = pair_authority.fees;
+
+        let pair_auth_fee_applied = pair
+            .spot_price
+            .checked_mul(pair_authority_fees as u64)
+            .unwrap()
+            .checked_div(10000)
+            .unwrap();
+
+        if ctx.accounts.quote_token_vault.amount
+            < pair.spot_price.checked_add(pair_auth_fee_applied).unwrap()
+        {
+            return Err(ProgramError::InsufficientBalance.into());
+        }
 
         if !pair.is_active {
             return Err(ProgramError::PairNotActive.into());
@@ -110,9 +143,9 @@ impl<'info> SwapNftTradePair<'info> {
         let collection_metadata = ctx.accounts.nft_collection_metadata.clone();
 
         validate_nft(
-            nft_token_mint,
+            *nft_token_mint,
             nft_token_metadata,
-            collection_mint,
+            *collection_mint,
             collection_metadata,
         )?;
 
@@ -123,8 +156,43 @@ impl<'info> SwapNftTradePair<'info> {
 #[access_control(SwapNftTradePair::accounts(&ctx))]
 pub fn handler(ctx: Context<SwapNftTradePair>) -> Result<()> {
     let pair = &mut ctx.accounts.pair;
+    let pair_authority = &mut ctx.accounts.pair_authority;
     let pair_metadata = &mut ctx.accounts.pair_metadata;
     let program_as_signer_bump = *ctx.bumps.get("program_as_signer").unwrap();
+
+    let pair_authority_fees = pair_authority.fees;
+
+    let pair_auth_fee_applied = pair
+        .spot_price
+        .checked_mul(pair_authority_fees as u64)
+        .unwrap()
+        .checked_div(10000)
+        .unwrap();
+
+    let transfer_pair_authority_fees_accounts = Transfer {
+        from: ctx.accounts.quote_token_vault.to_account_info(),
+        to: ctx
+            .accounts
+            .pair_authority_quote_token_account
+            .to_account_info(),
+        authority: ctx.accounts.program_as_signer.to_account_info(),
+    };
+
+    let seeds = &[
+        "program".as_bytes(),
+        "signer".as_bytes(),
+        &[program_as_signer_bump],
+    ];
+
+    let signer = &[&seeds[..]];
+
+    let transfer_pair_authority_fees_ctx = CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info(),
+        transfer_pair_authority_fees_accounts,
+        signer,
+    );
+
+    transfer(transfer_pair_authority_fees_ctx, pair_auth_fee_applied)?;
 
     let fee = pair.fee;
     let current_spot_price = pair.spot_price;

@@ -13,6 +13,7 @@ pub struct TradeNftPair<'info> {
     #[account(constraint = pair_authority.key() == pair.pair_authority @ ProgramError::InvalidPairAuthority)]
     pub pair_authority: Account<'info, PairAuthority>,
 
+    /// CHECK: only used as authority target for pair_authority_quote_token_account
     #[account(
         constraint = current_authority.key() == pair_authority.current_authority @ ProgramError::InvalidCurrentAuthority,
     )]
@@ -24,7 +25,7 @@ pub struct TradeNftPair<'info> {
         associated_token::mint = quote_token_mint,
         associated_token::authority = current_authority
     )]
-    pub pair_authority_quote_token_account: Account<'info, TokenAccount>,
+    pub pair_authority_quote_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(mut, constraint = pair.pair_type == 1)]
     pub pair: Account<'info, Pair>,
