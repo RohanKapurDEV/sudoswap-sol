@@ -10,6 +10,22 @@ pub struct TradeTokenPair<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    #[account(constraint = pair_authority.key() == pair.pair_authority @ ProgramError::InvalidPairAuthority)]
+    pub pair_authority: Account<'info, PairAuthority>,
+
+    #[account(
+        constraint = current_authority.key() == pair_authority.current_authority @ ProgramError::InvalidCurrentAuthority,
+    )]
+    pub current_authority: UncheckedAccount<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = payer,
+        associated_token::mint = quote_token_mint,
+        associated_token::authority = current_authority
+    )]
+    pub pair_authority_quote_token_account: Account<'info, TokenAccount>,
+
     #[account(
         mut,
         constraint = pair.pair_type == 0 @ ProgramError::InvalidPairType
@@ -59,7 +75,7 @@ pub struct TradeTokenPair<'info> {
         mut,
         constraint = quote_token_vault.key() == pair.quote_token_vault @ ProgramError::InvalidQuoteTokenVault,
         constraint = quote_token_vault.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
-        constraint = quote_token_vault.amount >= pair.spot_price @ ProgramError::InsufficientBalance,
+        // constraint = quote_token_vault.amount >= pair.spot_price @ ProgramError::InsufficientBalance, REDO TO MAKE SURE AMOUNT + PROTOCOL FEE IS PRESENT
     )]
     pub quote_token_vault: Box<Account<'info, TokenAccount>>,
 
@@ -84,6 +100,22 @@ pub struct TradeTokenPair<'info> {
 impl<'info> TradeTokenPair<'info> {
     fn accounts(ctx: &Context<TradeTokenPair>) -> Result<()> {
         let pair = ctx.accounts.pair.clone();
+        let pair_authority = ctx.accounts.pair_authority.clone();
+
+        let pair_authority_fees = pair_authority.fees;
+
+        let pair_auth_fee_applied = pair
+            .spot_price
+            .checked_mul(pair_authority_fees as u64)
+            .unwrap()
+            .checked_div(10000)
+            .unwrap();
+
+        if ctx.accounts.quote_token_vault.amount
+            < pair.spot_price.checked_add(pair_auth_fee_applied).unwrap()
+        {
+            return Err(ProgramError::InsufficientBalance.into());
+        }
 
         if !pair.is_active {
             return Err(ProgramError::PairNotActive.into());
@@ -110,7 +142,17 @@ impl<'info> TradeTokenPair<'info> {
 pub fn handler(ctx: Context<TradeTokenPair>) -> Result<()> {
     let pair = &mut ctx.accounts.pair;
     let pair_metadata = &mut ctx.accounts.pair_metadata;
+    let pair_authority = &mut ctx.accounts.pair_authority;
     let program_as_signer_bump = *ctx.bumps.get("program_as_signer").unwrap();
+
+    let pair_authority_fees = pair_authority.fees;
+
+    let pair_auth_fee_applied = pair
+        .spot_price
+        .checked_mul(pair_authority_fees as u64)
+        .unwrap()
+        .checked_div(10000)
+        .unwrap();
 
     let current_spot_price = pair.spot_price;
 
@@ -132,7 +174,7 @@ pub fn handler(ctx: Context<TradeTokenPair>) -> Result<()> {
     let transfer_quote_accounts = Transfer {
         from: ctx.accounts.quote_token_vault.to_account_info(),
         to: ctx.accounts.user_quote_token_account.to_account_info(),
-        authority: ctx.accounts.payer.to_account_info(),
+        authority: ctx.accounts.program_as_signer.to_account_info(),
     };
 
     let seeds = &[
@@ -151,13 +193,32 @@ pub fn handler(ctx: Context<TradeTokenPair>) -> Result<()> {
 
     transfer(transfer_quote_ctx, current_spot_price)?;
 
+    let transfer_pair_authority_accounts = Transfer {
+        from: ctx.accounts.quote_token_vault.to_account_info(),
+        to: ctx
+            .accounts
+            .pair_authority_quote_token_account
+            .to_account_info(),
+        authority: ctx.accounts.program_as_signer.to_account_info(),
+    };
+
+    let transfer_pair_authority_ctx = CpiContext::new_with_signer(
+        ctx.accounts.associated_token_program.to_account_info(),
+        transfer_pair_authority_accounts,
+        signer,
+    );
+
+    transfer(transfer_pair_authority_ctx, pair_auth_fee_applied)?;
+
     let bonding_curve = pair.bonding_curve;
+    let latest_spot_price: u64;
 
     if bonding_curve == 0 {
         let delta = pair.delta;
 
         let new_spot_price = current_spot_price.checked_sub(delta).unwrap();
         pair.spot_price = new_spot_price;
+        latest_spot_price = new_spot_price;
     } else {
         let delta = pair.delta;
 
@@ -167,6 +228,7 @@ pub fn handler(ctx: Context<TradeTokenPair>) -> Result<()> {
             .unwrap();
 
         pair.spot_price = new_spot_price;
+        latest_spot_price = new_spot_price;
     }
 
     pair.nfts_held = pair.nfts_held.checked_add(1).unwrap();
@@ -174,8 +236,12 @@ pub fn handler(ctx: Context<TradeTokenPair>) -> Result<()> {
 
     let quote_token_vault = &mut ctx.accounts.quote_token_vault;
 
-    // If token pair can no longer sell quote tokens for
-    if quote_token_vault.amount < current_spot_price.checked_sub(pair.delta).unwrap() {
+    // If token pair can no longer sell quote tokens, deactivate it
+    if quote_token_vault.amount
+        < latest_spot_price
+            .checked_add(pair_auth_fee_applied)
+            .unwrap()
+    {
         pair.is_active = false;
     }
 
