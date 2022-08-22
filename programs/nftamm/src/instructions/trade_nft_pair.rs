@@ -10,6 +10,22 @@ pub struct TradeNftPair<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    #[account(constraint = pair_authority.key() == pair.pair_authority @ ProgramError::InvalidPairAuthority)]
+    pub pair_authority: Account<'info, PairAuthority>,
+
+    #[account(
+        constraint = current_authority.key() == pair_authority.current_authority @ ProgramError::InvalidCurrentAuthority,
+    )]
+    pub current_authority: UncheckedAccount<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = payer,
+        associated_token::mint = quote_token_mint,
+        associated_token::authority = current_authority
+    )]
+    pub pair_authority_quote_token_account: Account<'info, TokenAccount>,
+
     #[account(mut, constraint = pair.pair_type == 1)]
     pub pair: Account<'info, Pair>,
 
@@ -72,7 +88,6 @@ pub struct TradeNftPair<'info> {
         mut,
         constraint = user_quote_token_account.mint == quote_token_mint.key(),
         constraint = user_quote_token_account.owner == payer.key(),
-        constraint = user_quote_token_account.amount >= pair.spot_price,
     )]
     pub user_quote_token_account: Box<Account<'info, TokenAccount>>,
 
@@ -89,6 +104,22 @@ pub struct TradeNftPair<'info> {
 impl<'info> TradeNftPair<'info> {
     fn accounts(ctx: &Context<TradeNftPair>) -> Result<()> {
         let pair = ctx.accounts.pair.clone();
+        let pair_authority = ctx.accounts.pair_authority.clone();
+
+        let pair_authority_fees = pair_authority.fees;
+
+        let pair_auth_fee_applied = pair
+            .spot_price
+            .checked_mul(pair_authority_fees as u64)
+            .unwrap()
+            .checked_div(10000)
+            .unwrap();
+
+        if ctx.accounts.user_quote_token_account.amount
+            < pair.spot_price.checked_add(pair_auth_fee_applied).unwrap()
+        {
+            return Err(ProgramError::InsufficientBalance.into());
+        }
 
         if !pair.is_active {
             return Err(ProgramError::PairNotActive.into());
@@ -114,7 +145,33 @@ impl<'info> TradeNftPair<'info> {
 #[access_control(TradeNftPair::accounts(&ctx))]
 pub fn handler(ctx: Context<TradeNftPair>) -> Result<()> {
     let pair = &mut ctx.accounts.pair;
+    let pair_authority = &ctx.accounts.pair_authority;
     let program_as_signer_bump = *ctx.bumps.get("program_as_signer").unwrap();
+
+    let pair_authority_fees = pair_authority.fees;
+
+    let pair_auth_fee_applied = pair
+        .spot_price
+        .checked_mul(pair_authority_fees as u64)
+        .unwrap()
+        .checked_div(10000)
+        .unwrap();
+
+    let transfer_pair_authority_accounts = Transfer {
+        from: ctx.accounts.user_quote_token_account.to_account_info(),
+        to: ctx
+            .accounts
+            .pair_authority_quote_token_account
+            .to_account_info(),
+        authority: ctx.accounts.payer.to_account_info(),
+    };
+
+    let transfer_pair_authority_quote_ctx = CpiContext::new(
+        ctx.accounts.token_program.to_account_info(),
+        transfer_pair_authority_accounts,
+    );
+
+    transfer(transfer_pair_authority_quote_ctx, pair_auth_fee_applied)?;
 
     let transfer_quote_accounts = Transfer {
         from: ctx.accounts.user_quote_token_account.to_account_info(),
@@ -177,5 +234,6 @@ pub fn handler(ctx: Context<TradeNftPair>) -> Result<()> {
     if pair.nfts_held == 0 {
         pair.is_active = false;
     }
+
     Ok(())
 }

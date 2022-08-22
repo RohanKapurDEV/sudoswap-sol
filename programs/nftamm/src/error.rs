@@ -48,4 +48,8 @@ pub enum ProgramError {
     InvalidFees,
     #[msg("Cannot close pair account because it still holds nfts. Please withdraw all nfts first")]
     StillHoldsNfts,
+    #[msg("Invalid pair authority")]
+    InvalidPairAuthority,
+    #[msg("Invalid current authority for pair authority")]
+    InvalidCurrentAuthority,
 }
