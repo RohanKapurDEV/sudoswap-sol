@@ -91,4 +91,11 @@ pub mod nftamm {
     pub fn withdraw_nft(ctx: Context<WithdrawNft>) -> Result<()> {
         instructions::withdraw_nft::handler(ctx)
     }
+
+    pub fn withdraw_quote_token(
+        ctx: Context<WithdrawQuoteToken>,
+        amount_to_withdraw: u64,
+    ) -> Result<()> {
+        instructions::withdraw_quote_token::handler(ctx, amount_to_withdraw)
+    }
 }
