@@ -11,6 +11,7 @@ pub struct TransferPairAuthority<'info> {
     #[account(mut)]
     pub pair_authority: Account<'info, PairAuthority>,
 
+    /// CHECK: used as field for pair_authority
     pub pending_authority: UncheckedAccount<'info>,
 }
 
