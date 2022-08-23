@@ -52,4 +52,6 @@ pub enum ProgramError {
     InvalidPairAuthority,
     #[msg("Invalid current authority for pair authority")]
     InvalidCurrentAuthority,
+    #[msg("Invalid pending authority for pair authority")]
+    InvalidPendingAuthority,
 }

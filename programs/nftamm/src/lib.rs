@@ -20,6 +20,14 @@ pub mod nftamm {
         instructions::initialize_pair_authority::handler(ctx, fees)
     }
 
+    pub fn transfer_pair_authority(ctx: Context<TransferPairAuthority>) -> Result<()> {
+        instructions::transfer_pair_authority::handler(ctx)
+    }
+
+    pub fn accept_pair_authority(ctx: Context<AcceptPairAuthority>) -> Result<()> {
+        instructions::accept_pair_authority::handler(ctx)
+    }
+
     pub fn initialize_pair(
         ctx: Context<InitializePair>,
         pair_type: u8,
