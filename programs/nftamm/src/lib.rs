@@ -87,4 +87,8 @@ pub mod nftamm {
     pub fn close_pair(ctx: Context<ClosePair>) -> Result<()> {
         instructions::close_pair::handler(ctx)
     }
+
+    pub fn withdraw_nft(ctx: Context<WithdrawNft>) -> Result<()> {
+        instructions::withdraw_nft::handler(ctx)
+    }
 }

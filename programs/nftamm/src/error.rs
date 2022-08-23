@@ -54,4 +54,6 @@ pub enum ProgramError {
     InvalidCurrentAuthority,
     #[msg("Invalid pending authority for pair authority")]
     InvalidPendingAuthority,
+    #[msg("Invalid nft token vault")]
+    InvalidNftTokenVault,
 }
