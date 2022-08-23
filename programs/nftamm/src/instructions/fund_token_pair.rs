@@ -1,12 +1,16 @@
+use crate::{error::ProgramError, state::*};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
-
-use crate::{error::ProgramError, state::Pair};
 
 #[derive(Accounts)]
 pub struct FundTokenPair<'info> {
     #[account(constraint = payer.key() == pair.owner @ ProgramError::InvalidOwner)]
     pub payer: Signer<'info>,
+
+    #[account(
+        constraint = pair_authority.key() == pair.pair_authority @ ProgramError::InvalidPairAuthority,
+    )]
+    pub pair_authority: Account<'info, PairAuthority>,
 
     #[account(mut)]
     pub pair: Account<'info, Pair>,
@@ -28,7 +32,6 @@ pub struct FundTokenPair<'info> {
         mut,
         constraint = owner_quote_token_account.owner == payer.key() @ ProgramError::InvalidOwner,
         constraint = owner_quote_token_account.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
-        constraint = owner_quote_token_account.amount >= pair.spot_price @ ProgramError::InsufficientBalance,
     )]
     pub owner_quote_token_account: Account<'info, TokenAccount>,
 
@@ -41,14 +44,22 @@ pub struct FundTokenPair<'info> {
 
 pub fn handler(ctx: Context<FundTokenPair>, amount_to_send: u64) -> Result<()> {
     let pair = &mut ctx.accounts.pair;
+    let pair_authority = &mut ctx.accounts.pair_authority;
+
+    let pair_authority_fees = pair_authority.fees;
+
+    let pair_auth_fee_applied = pair
+        .spot_price
+        .checked_mul(pair_authority_fees as u64)
+        .unwrap()
+        .checked_div(10000)
+        .unwrap();
+
+    let current_spot_price = pair.spot_price;
 
     // This can be called on token pairs or trade pairs
     if pair.pair_type != 0 || pair.pair_type != 2 {
         return Err(ProgramError::InvalidPairType.into());
-    }
-
-    if amount_to_send < pair.spot_price {
-        return Err(ProgramError::InvalidFundingAmount.into());
     }
 
     let transfer_accounts = Transfer {
@@ -64,8 +75,14 @@ pub fn handler(ctx: Context<FundTokenPair>, amount_to_send: u64) -> Result<()> {
 
     transfer(transfer_ctx, amount_to_send)?;
 
-    if pair.is_active == false {
-        pair.is_active = true;
+    if pair.pair_type == 0 {
+        if ctx.accounts.quote_token_vault.amount
+            < current_spot_price
+                .checked_add(pair_auth_fee_applied)
+                .unwrap()
+        {
+            pair.is_active = false;
+        }
     }
 
     Ok(())
