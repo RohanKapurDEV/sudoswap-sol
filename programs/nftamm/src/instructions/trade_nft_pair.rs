@@ -158,7 +158,7 @@ pub fn handler(ctx: Context<TradeNftPair>) -> Result<()> {
         .checked_div(10000)
         .unwrap();
 
-    let transfer_pair_authority_accounts = Transfer {
+    let transfer_pair_authority_fee_accounts = Transfer {
         from: ctx.accounts.user_quote_token_account.to_account_info(),
         to: ctx
             .accounts
@@ -167,12 +167,12 @@ pub fn handler(ctx: Context<TradeNftPair>) -> Result<()> {
         authority: ctx.accounts.payer.to_account_info(),
     };
 
-    let transfer_pair_authority_quote_ctx = CpiContext::new(
+    let transfer_pair_authority_fees_ctx = CpiContext::new(
         ctx.accounts.token_program.to_account_info(),
-        transfer_pair_authority_accounts,
+        transfer_pair_authority_fee_accounts,
     );
 
-    transfer(transfer_pair_authority_quote_ctx, pair_auth_fee_applied)?;
+    transfer(transfer_pair_authority_fees_ctx, pair_auth_fee_applied)?;
 
     let transfer_quote_accounts = Transfer {
         from: ctx.accounts.user_quote_token_account.to_account_info(),

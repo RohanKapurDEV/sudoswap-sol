@@ -107,6 +107,7 @@ pub fn handler(
         return Err(ProgramError::InvalidFee.into());
     }
 
+    // If bonding curve is exponential, then enforce delta to be represented in basis points
     if bonding_curve == 1 {
         if delta > 10000 {
             return Err(ProgramError::InvalidDelta.into());
@@ -114,6 +115,13 @@ pub fn handler(
     }
 
     let pair = &mut ctx.accounts.pair;
+
+    // If the pair is not of type 2, then make sure fees is set to 0
+    if pair.pair_type != 2 {
+        if fee != 0 {
+            return Err(ProgramError::InvalidFee.into());
+        }
+    }
 
     pair.pair_authority = ctx.accounts.pair_authority.key();
     pair.owner = ctx.accounts.payer.key();
