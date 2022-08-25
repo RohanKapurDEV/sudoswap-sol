@@ -7,7 +7,7 @@ mod utils;
 
 use instructions::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("nftm2GmXMWeH8VCYxx8bAp3wL3tSx4Rp4LfZ1fmg6gk");
 
 #[program]
 pub mod nftamm {
