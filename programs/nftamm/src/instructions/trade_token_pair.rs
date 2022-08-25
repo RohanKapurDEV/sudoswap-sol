@@ -76,7 +76,7 @@ pub struct TradeTokenPair<'info> {
         mut,
         constraint = quote_token_vault.key() == pair.quote_token_vault @ ProgramError::InvalidQuoteTokenVault,
         constraint = quote_token_vault.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
-        // constraint = quote_token_vault.amount >= pair.spot_price @ ProgramError::InsufficientBalance, REDO TO MAKE SURE AMOUNT + PROTOCOL FEE IS PRESENT
+        // quote_token_vault.amount is enforced in TradeTokenPair::accounts
     )]
     pub quote_token_vault: Box<Account<'info, TokenAccount>>,
 
@@ -194,7 +194,7 @@ pub fn handler(ctx: Context<TradeTokenPair>) -> Result<()> {
 
     transfer(transfer_quote_ctx, current_spot_price)?;
 
-    let transfer_pair_authority_accounts = Transfer {
+    let transfer_pair_authority_fee_accounts = Transfer {
         from: ctx.accounts.quote_token_vault.to_account_info(),
         to: ctx
             .accounts
@@ -203,13 +203,13 @@ pub fn handler(ctx: Context<TradeTokenPair>) -> Result<()> {
         authority: ctx.accounts.program_as_signer.to_account_info(),
     };
 
-    let transfer_pair_authority_ctx = CpiContext::new_with_signer(
+    let transfer_pair_authority_fee_ctx = CpiContext::new_with_signer(
         ctx.accounts.associated_token_program.to_account_info(),
-        transfer_pair_authority_accounts,
+        transfer_pair_authority_fee_accounts,
         signer,
     );
 
-    transfer(transfer_pair_authority_ctx, pair_auth_fee_applied)?;
+    transfer(transfer_pair_authority_fee_ctx, pair_auth_fee_applied)?;
 
     let bonding_curve = pair.bonding_curve;
     let latest_spot_price: u64;

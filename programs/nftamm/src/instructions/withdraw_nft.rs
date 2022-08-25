@@ -45,7 +45,7 @@ pub struct WithdrawNft<'info> {
         associated_token::mint = nft_token_mint,
         associated_token::authority = payer
     )]
-    pub owner_nft_token_account: Account<'info, TokenAccount>,
+    pub owner_nft_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -53,7 +53,7 @@ pub struct WithdrawNft<'info> {
         constraint = nft_token_vault.mint == nft_token_mint.key() @ ProgramError::InvalidMint,
         constraint = nft_token_vault.owner == program_as_signer.key() @ ProgramError::InvalidMint,
     )]
-    pub nft_token_vault: Account<'info, TokenAccount>,
+    pub nft_token_vault: Box<Account<'info, TokenAccount>>,
 
     /// CHECK: PDA used as token account authority only
     #[account(seeds = [b"program", b"signer"], bump)]
