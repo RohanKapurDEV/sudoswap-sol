@@ -86,7 +86,7 @@ pub struct SwapNftTradePair<'info> {
 
     #[account(
         mut,
-        seeds = [b"quote", pair.key().as_ref()],
+        seeds = [b"quote", "fee".as_bytes(), pair.key().as_ref()],
         bump,
         constraint = quote_fee_vault.key() == pair.fee_vault @ ProgramError::InvalidFeeVault ,
         constraint = quote_fee_vault.mint == quote_token_mint.key() @ ProgramError::InvalidQuoteTokenMint,
