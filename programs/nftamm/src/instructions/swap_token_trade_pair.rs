@@ -63,8 +63,6 @@ pub struct SwapTokenTradePair<'info> {
 
     #[account(
         mut,
-        seeds = [b"nft_account", pair.key().as_ref(), nft_token_mint.key().as_ref()],
-        bump,
         constraint = nft_token_vault.amount == 1 @ ProgramError::InsufficientBalance,
         constraint = nft_token_vault.owner == program_as_signer.key() @ ProgramError::InvalidOwner,
     )]
