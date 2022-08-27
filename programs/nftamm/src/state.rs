@@ -8,7 +8,7 @@ pub struct PairAuthority {
 }
 
 impl PairAuthority {
-    pub const SIZE: usize = 32 + 32;
+    pub const SIZE: usize = 32 + 32 + 2;
 }
 
 #[account]
@@ -44,5 +44,5 @@ pub struct PairMetadata {
 }
 
 impl PairMetadata {
-    pub const SIZE: usize = 32 * 3;
+    pub const SIZE: usize = 32 * 4;
 }
