@@ -263,6 +263,7 @@ pub fn handler(ctx: Context<SwapNftTradePair>) -> Result<()> {
     pair.nfts_held = pair.nfts_held.checked_add(1).unwrap();
     pair.trade_count = pair.trade_count.checked_add(1).unwrap();
 
+    pair_metadata.pair = ctx.accounts.pair.key();
     pair_metadata.token_mint = ctx.accounts.nft_token_mint.key();
     pair_metadata.collection_mint = ctx.accounts.nft_collection_mint.key();
     pair_metadata.token_account = ctx.accounts.nft_token_vault.key();
