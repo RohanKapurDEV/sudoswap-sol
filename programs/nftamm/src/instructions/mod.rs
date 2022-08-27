@@ -12,6 +12,7 @@ pub mod swap_token_trade_pair;
 pub mod trade_nft_pair;
 pub mod trade_token_pair;
 pub mod transfer_pair_authority;
+pub mod withdraw_fee;
 pub mod withdraw_nft;
 pub mod withdraw_quote_token;
 
@@ -29,5 +30,6 @@ pub use swap_token_trade_pair::*;
 pub use trade_nft_pair::*;
 pub use trade_token_pair::*;
 pub use transfer_pair_authority::*;
+pub use withdraw_fee::*;
 pub use withdraw_nft::*;
 pub use withdraw_quote_token::*;

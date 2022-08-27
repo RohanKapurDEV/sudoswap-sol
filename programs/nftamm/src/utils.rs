@@ -79,3 +79,8 @@ pub fn validate_nft(
 
     Ok(())
 }
+
+// Helper function to pay NFT royalties if enabled for a pool
+pub fn honor_royalties() -> Result<()> {
+    Ok(())
+}

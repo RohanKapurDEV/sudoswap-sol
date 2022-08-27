@@ -98,4 +98,8 @@ pub mod nftamm {
     ) -> Result<()> {
         instructions::withdraw_quote_token::handler(ctx, amount_to_withdraw)
     }
+
+    pub fn withdraw_fee(ctx: Context<WithdrawFee>, amount: u64) -> Result<()> {
+        instructions::withdraw_fee::handler(ctx, amount)
+    }
 }
