@@ -38,13 +38,13 @@ pub struct SwapTokenTradePair<'info> {
     /// CHECK: only used as close target for pair_metadata
     #[account(
         mut,
-        constraint = pair_owner.key() == pair.owner @ ProgramError::InvalidOwner,
+        constraint = pair_metadata_creator.key() == pair_metadata.creator @ ProgramError::InvalidCreator,
     )]
-    pub pair_owner: UncheckedAccount<'info>,
+    pub pair_metadata_creator: UncheckedAccount<'info>,
 
     #[account(
         mut,
-        close = pair_owner,
+        close = pair_metadata_creator,
         seeds = [b"pair_metadata", pair.key().as_ref(), nft_token_mint.key().as_ref()],
         bump
     )]

@@ -56,4 +56,6 @@ pub enum ProgramError {
     InvalidPendingAuthority,
     #[msg("Invalid nft token vault")]
     InvalidNftTokenVault,
+    #[msg("Invalid creator for pair metadata")]
+    InvalidCreator,
 }
