@@ -22,7 +22,13 @@ pub struct WithdrawNft<'info> {
 
     #[account(
         mut,
-        close = payer,
+        constraint = pair_metadata_creator.key() == pair_metadata.creator @ ProgramError::InvalidCreator,
+    )]
+    pub pair_metadata_creator: UncheckedAccount<'info>,
+
+    #[account(
+        mut,
+        close = pair_metadata_creator,
         seeds = [b"pair_metadata", pair.key().as_ref(), nft_token_mint.key().as_ref()],
         bump
     )]
