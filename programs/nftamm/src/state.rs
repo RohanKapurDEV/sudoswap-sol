@@ -41,8 +41,9 @@ pub struct PairMetadata {
     pub token_mint: Pubkey,
     pub collection_mint: Pubkey,
     pub token_account: Pubkey,
+    pub creator: Pubkey, // Stored for close target
 }
 
 impl PairMetadata {
-    pub const SIZE: usize = 32 * 4;
+    pub const SIZE: usize = 32 * 5;
 }

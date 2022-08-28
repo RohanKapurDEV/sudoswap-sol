@@ -110,6 +110,7 @@ pub fn handler(ctx: Context<FundNftPair>) -> Result<()> {
     pair_metadata.token_mint = ctx.accounts.nft_token_mint.key();
     pair_metadata.collection_mint = ctx.accounts.nft_collection_mint.key();
     pair_metadata.token_account = ctx.accounts.nft_token_vault.key();
+    pair_metadata.creator = ctx.accounts.payer.key();
 
     Ok(())
 }
