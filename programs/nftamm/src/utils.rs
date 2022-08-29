@@ -129,13 +129,8 @@ pub fn honor_royalties<'info>(
     rent_sysvar: &AccountInfo<'info>,
 ) -> Result<()> {
     let metadata: Metadata = Metadata::from_account_info(metadata_account_info)?;
-    let fees = metadata.data.seller_fee_basis_points;
 
-    let total_fee = (fees as u128)
-        .checked_mul(size as u128)
-        .ok_or(ProgramError::NumericalOverflow)?
-        .checked_div(10000)
-        .ok_or(ProgramError::NumericalOverflow)? as u64;
+    let total_fee = size as u128;
 
     match metadata.data.creators {
         Some(creators) => {
@@ -220,7 +215,9 @@ pub fn honor_royalties<'info>(
                 }
             }
         }
-        None => {}
+        None => {
+            msg!("No creators found in metadata");
+        }
     }
 
     Ok(())
