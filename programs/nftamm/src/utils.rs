@@ -3,7 +3,11 @@ use anchor_lang::{
     prelude::*,
     solana_program::{program::invoke_signed, program_memory::sol_memcmp, pubkey::PUBKEY_BYTES},
 };
-use anchor_spl::{associated_token::create, associated_token::Create, token::Mint};
+use anchor_spl::{
+    associated_token::create,
+    associated_token::Create,
+    token::{transfer, Mint, Transfer},
+};
 use mpl_token_metadata::state::{Metadata, TokenMetadataAccount};
 use std::{convert::TryInto, slice::Iter};
 
@@ -114,12 +118,13 @@ pub fn calculate_royalty_fee<'info>(
 // Helper function to honor NFT royalties for a given NFT
 pub fn honor_royalties<'info>(
     is_pair_paying: bool, // if true, CpiContext::new_with_signer is used, otherwise CpiContext::new is used
+    program_as_signer_bump: Option<u8>,
     remaining_accounts: &mut Iter<AccountInfo<'info>>,
     metadata_account_info: &AccountInfo<'info>,
     size: u64,
-    is_native: bool, // If using wrapped SOL, unwrap first and then send to royalty recipient
     associated_token_program: &AccountInfo<'info>,
     payer: &AccountInfo<'info>,
+    payer_token_account: &AccountInfo<'info>,
     mint: &AccountInfo<'info>,
     system_program: &AccountInfo<'info>,
     token_program: &AccountInfo<'info>,
@@ -127,11 +132,13 @@ pub fn honor_royalties<'info>(
 ) -> Result<()> {
     let metadata: Metadata = Metadata::from_account_info(metadata_account_info)?;
     let fees = metadata.data.seller_fee_basis_points;
+
     let total_fee = (fees as u128)
         .checked_mul(size as u128)
         .ok_or(ProgramError::NumericalOverflow)?
         .checked_div(10000)
         .ok_or(ProgramError::NumericalOverflow)? as u64;
+
     let mut remaining_fee = total_fee;
     let remaining_size = size
         .checked_sub(total_fee)
@@ -146,46 +153,85 @@ pub fn honor_royalties<'info>(
                         .ok_or(ProgramError::NumericalOverflow)?
                         .checked_div(100)
                         .ok_or(ProgramError::NumericalOverflow)? as u64;
+
                 remaining_fee = remaining_fee
                     .checked_sub(creator_fee)
                     .ok_or(ProgramError::NumericalOverflow)?;
+
                 let current_creator_info = next_account_info(remaining_accounts)?;
                 assert_keys_equal(creator.address, *current_creator_info.key)?;
 
-                if !is_native {
-                    let current_creator_token_account_info = next_account_info(remaining_accounts)?;
-                    if current_creator_token_account_info.data_is_empty() {
-                        let create_ata_accounts = Create {
-                            payer: payer.clone(),
-                            associated_token: associated_token_program.clone(),
-                            authority: payer.clone(),
-                            mint: mint.clone(),
-                            system_program: system_program.clone(),
-                            rent: rent_sysvar.clone(),
-                            token_program: token_program.clone(),
-                        };
+                let current_creator_token_account_info = next_account_info(remaining_accounts)?;
+
+                if current_creator_token_account_info.data_is_empty() {
+                    // If pair_is_paying, then the payer account param must be program_as_signer. Otherwise, payer is signer
+                    let create_ata_accounts = Create {
+                        payer: payer.clone(),
+                        associated_token: associated_token_program.clone(),
+                        authority: payer.clone(),
+                        mint: mint.clone(),
+                        system_program: system_program.clone(),
+                        rent: rent_sysvar.clone(),
+                        token_program: token_program.clone(),
+                    };
+
+                    if is_pair_paying {
+                        let seeds = &[
+                            "program".as_bytes(),
+                            "signer".as_bytes(),
+                            &[program_as_signer_bump.unwrap()],
+                        ];
+
+                        let signer = &[&seeds[..]];
+
+                        let create_ctx = CpiContext::new_with_signer(
+                            associated_token_program.clone(),
+                            create_ata_accounts,
+                            signer,
+                        );
+
+                        create(create_ctx)?;
+                    } else {
                         let create_ctx =
                             CpiContext::new(associated_token_program.clone(), create_ata_accounts);
 
                         create(create_ctx)?;
                     }
+                }
 
-                    if creator_fee > 0 {
-                        if is_pair_paying {
-                        } else {
-                        }
-                    }
-                } else if creator_fee > 0 {
+                if creator_fee > 0 {
+                    let transfer_accounts = Transfer {
+                        from: payer_token_account.clone(),
+                        to: current_creator_token_account_info.clone(),
+                        authority: payer.clone(),
+                    };
+
                     if is_pair_paying {
+                        let seeds = &[
+                            "program".as_bytes(),
+                            "signer".as_bytes(),
+                            &[program_as_signer_bump.unwrap()],
+                        ];
+
+                        let signer = &[&seeds[..]];
+
+                        let transfer_ctx = CpiContext::new_with_signer(
+                            token_program.clone(),
+                            transfer_accounts,
+                            signer,
+                        );
+
+                        transfer(transfer_ctx, creator_fee)?;
                     } else {
+                        let transfer_ctx =
+                            CpiContext::new(token_program.clone(), transfer_accounts);
+
+                        transfer(transfer_ctx, creator_fee)?;
                     }
                 }
-                // else if it is native, unwrap first and then send to royalty recipient
             }
         }
-        None => {
-            // do nothing
-        }
+        None => {}
     }
 
     Ok(())
