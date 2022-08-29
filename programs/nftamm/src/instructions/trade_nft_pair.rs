@@ -106,6 +106,7 @@ impl<'info> TradeNftPair<'info> {
     fn accounts(ctx: &Context<TradeNftPair>) -> Result<()> {
         let pair = ctx.accounts.pair.clone();
         let pair_authority = ctx.accounts.pair_authority.clone();
+        let token_metadata = ctx.accounts.nft_token_metadata.clone();
 
         let pair_authority_fees = pair_authority.fees;
 
@@ -116,10 +117,14 @@ impl<'info> TradeNftPair<'info> {
             .checked_div(10000)
             .unwrap();
 
-        if ctx.accounts.user_quote_token_account.amount
-            < pair.spot_price.checked_add(pair_auth_fee_applied).unwrap()
-        {
-            return Err(ProgramError::InsufficientBalance.into());
+        if pair.honor_royalties {
+            // calc spotprice + pairauthfee + royaltyhonors
+        } else {
+            if ctx.accounts.user_quote_token_account.amount
+                < pair.spot_price.checked_add(pair_auth_fee_applied).unwrap()
+            {
+                return Err(ProgramError::InsufficientBalance.into());
+            }
         }
 
         if !pair.is_active {

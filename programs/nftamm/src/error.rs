@@ -58,4 +58,8 @@ pub enum ProgramError {
     InvalidNftTokenVault,
     #[msg("Invalid creator for pair metadata")]
     InvalidCreator,
+    #[msg("Numerical overflow")]
+    NumericalOverflow,
+    #[msg("Public keys not equal")]
+    PublicKeyMismatch,
 }
