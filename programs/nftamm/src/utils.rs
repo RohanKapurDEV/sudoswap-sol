@@ -1,7 +1,7 @@
 use crate::error::ProgramError;
 use anchor_lang::{
     prelude::*,
-    solana_program::{program::invoke_signed, program_memory::sol_memcmp, pubkey::PUBKEY_BYTES},
+    solana_program::{program_memory::sol_memcmp, pubkey::PUBKEY_BYTES},
 };
 use anchor_spl::{
     associated_token::create,
@@ -9,7 +9,7 @@ use anchor_spl::{
     token::{transfer, Mint, Transfer},
 };
 use mpl_token_metadata::state::{Metadata, TokenMetadataAccount};
-use std::{convert::TryInto, slice::Iter};
+use std::slice::Iter;
 
 // Function taken from auction house contract
 pub fn assert_metadata_valid<'a>(metadata: &UncheckedAccount, mint: &Pubkey) -> Result<()> {
@@ -110,8 +110,6 @@ pub fn calculate_royalty_fee<'info>(
         .checked_div(10000)
         .ok_or(ProgramError::NumericalOverflow)? as u64;
 
-    // TODO: Check for remaining dust and subtract from total fee
-
     Ok(total_fee)
 }
 
@@ -139,11 +137,6 @@ pub fn honor_royalties<'info>(
         .checked_div(10000)
         .ok_or(ProgramError::NumericalOverflow)? as u64;
 
-    let mut remaining_fee = total_fee;
-    let remaining_size = size
-        .checked_sub(total_fee)
-        .ok_or(ProgramError::NumericalOverflow)?;
-
     match metadata.data.creators {
         Some(creators) => {
             for creator in creators {
@@ -153,10 +146,6 @@ pub fn honor_royalties<'info>(
                         .ok_or(ProgramError::NumericalOverflow)?
                         .checked_div(100)
                         .ok_or(ProgramError::NumericalOverflow)? as u64;
-
-                remaining_fee = remaining_fee
-                    .checked_sub(creator_fee)
-                    .ok_or(ProgramError::NumericalOverflow)?;
 
                 let current_creator_info = next_account_info(remaining_accounts)?;
                 assert_keys_equal(creator.address, *current_creator_info.key)?;
