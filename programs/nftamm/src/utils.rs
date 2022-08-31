@@ -74,6 +74,10 @@ pub fn validate_nft(
         return Err(ProgramError::InvalidCollectionMint.into());
     }
 
+    if collection_mint.to_account_info().owner != &anchor_spl::token::ID {
+        return Err(ProgramError::InvalidCollectionMint.into());
+    }
+
     if token_collection.unwrap().verified != true {
         return Err(ProgramError::NftNotVerified.into());
     }
