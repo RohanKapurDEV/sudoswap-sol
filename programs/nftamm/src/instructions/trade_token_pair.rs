@@ -25,7 +25,7 @@ pub struct TradeTokenPair<'info> {
         associated_token::mint = quote_token_mint,
         associated_token::authority = current_authority
     )]
-    pub pair_authority_quote_token_account: Account<'info, TokenAccount>,
+    pub pair_authority_quote_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
