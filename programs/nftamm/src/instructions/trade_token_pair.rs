@@ -36,7 +36,7 @@ pub struct TradeTokenPair<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + PairMetadata::SIZE,
+        space = 8 + std::mem::size_of::<PairMetadata>(),
         seeds = [b"pair_metadata", pair.key().as_ref(), nft_token_mint.key().as_ref()],
         bump
     )]
@@ -221,15 +221,7 @@ pub fn handler(ctx: Context<TradeTokenPair>) -> Result<()> {
         pair.spot_price = new_spot_price;
         latest_spot_price = new_spot_price;
     } else {
-        let delta = pair.delta;
-
-        // this is a very naive calculation, fix it later
-        let new_spot_price = current_spot_price
-            .checked_div(delta.checked_div(10000).unwrap().checked_add(1).unwrap())
-            .unwrap();
-
-        pair.spot_price = new_spot_price;
-        latest_spot_price = new_spot_price;
+        todo!()
     }
 
     pair.nfts_held = pair.nfts_held.checked_add(1).unwrap();

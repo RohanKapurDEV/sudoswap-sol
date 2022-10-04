@@ -9,7 +9,7 @@ pub struct InitializePairAuthority<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + PairAuthority::SIZE
+        space = 8 + std::mem::size_of::<PairAuthority>(),
     )]
     pub pair_authority: Account<'info, PairAuthority>,
 

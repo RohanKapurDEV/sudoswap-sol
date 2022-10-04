@@ -1,5 +1,8 @@
+#![allow(missing_docs)]
+
 use anchor_lang::prelude::*;
 
+/// Protocol level fee account for operator
 #[account]
 pub struct PairAuthority {
     pub current_authority: Pubkey,
@@ -7,10 +10,7 @@ pub struct PairAuthority {
     pub fees: u16,
 }
 
-impl PairAuthority {
-    pub const SIZE: usize = 32 + 32 + 2;
-}
-
+/// Keeps track of Pairs
 #[account]
 pub struct Pair {
     pub pair_authority: Pubkey,
@@ -30,11 +30,7 @@ pub struct Pair {
     pub nfts_held: u32,
 }
 
-impl Pair {
-    // Pubkeys + u64s + u32s + u8s + bools
-    pub const SIZE: usize = (32 * 6) + (8 * 4) + (4 * 1) + (1 * 2) + (1 * 2);
-}
-
+/// Keeps track of NFTs in a Pair
 #[account]
 pub struct PairMetadata {
     pub pair: Pubkey,
@@ -42,8 +38,4 @@ pub struct PairMetadata {
     pub collection_mint: Pubkey,
     pub token_account: Pubkey,
     pub creator: Pubkey, // Stored for close target
-}
-
-impl PairMetadata {
-    pub const SIZE: usize = 32 * 5;
 }

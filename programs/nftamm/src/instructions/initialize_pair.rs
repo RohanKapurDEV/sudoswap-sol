@@ -13,7 +13,7 @@ pub struct InitializePair<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + Pair::SIZE
+        space = 8 + std::mem::size_of::<Pair>()
     )]
     pub pair: Account<'info, Pair>,
 

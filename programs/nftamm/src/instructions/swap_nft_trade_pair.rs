@@ -38,7 +38,7 @@ pub struct SwapNftTradePair<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + PairMetadata::SIZE,
+        space = 8 + std::mem::size_of::<PairMetadata>(),
         seeds = [b"pair_metadata", pair.key().as_ref(), nft_token_mint.key().as_ref()],
         bump
     )]
