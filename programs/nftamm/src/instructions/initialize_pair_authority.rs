@@ -16,7 +16,9 @@ pub struct InitializePairAuthority<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Handler to initialize a pair authority.
 pub fn handler(ctx: Context<InitializePairAuthority>, fees: u16) -> Result<()> {
+    // Enforce basis points convention for fees
     if fees > 10000 {
         return Err(ProgramError::InvalidFees.into());
     }

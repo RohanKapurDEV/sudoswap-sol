@@ -20,6 +20,7 @@ pub struct WithdrawNft<'info> {
     #[account(mut)]
     pub pair: Account<'info, Pair>,
 
+    /// CHECK: Used as close target
     #[account(
         mut,
         constraint = pair_metadata_creator.key() == pair_metadata.creator @ ProgramError::InvalidCreator,

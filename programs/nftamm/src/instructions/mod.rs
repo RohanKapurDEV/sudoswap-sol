@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 pub mod accept_pair_authority;
 pub mod change_delta;
 pub mod change_fee;
