@@ -6,9 +6,11 @@ import {
   CreateNftOutput,
   keypairIdentity,
   Metaplex,
+  Mint,
+  TokenProgram,
 } from "@metaplex-foundation/js";
-import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import {} from "@metaplex-foundation/mpl-token-metadata";
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { createMint } from "@solana/spl-token";
 import { assert } from "chai";
 
 describe("nftamm", () => {
@@ -32,6 +34,8 @@ describe("nftamm", () => {
   let thirdNft: CreateNftOutput;
   let fourthNft: CreateNftOutput;
   let fifthNft: CreateNftOutput;
+
+  let collectionQuoteMint: PublicKey;
 
   // Configure the metaplex client to use the local cluster
   const metaplexConnection = new Connection(
@@ -60,7 +64,7 @@ describe("nftamm", () => {
 
     // Fund pool creator account
     const poolCreatorAirdropSig = await provider.connection.requestAirdrop(
-      protocolAuthority.publicKey,
+      poolCreator.publicKey,
       10 * LAMPORTS_PER_SOL
     );
 
@@ -72,7 +76,7 @@ describe("nftamm", () => {
 
     // Fund pool user account
     const poolUserAirdropSig = await provider.connection.requestAirdrop(
-      protocolAuthority.publicKey,
+      poolUser.publicKey,
       10 * LAMPORTS_PER_SOL
     );
 
@@ -81,11 +85,25 @@ describe("nftamm", () => {
       lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
       signature: poolUserAirdropSig,
     });
+
+    // Create a common quote mint for all pools
+    let mintPubkey = await createMint(
+      provider.connection, // conneciton
+      protocolAuthority, // fee payer
+      protocolAuthority.publicKey, // mint authority
+      protocolAuthority.publicKey, // freeze authority (you can use `null` to disable it. when you disable it, you can't turn it on again)
+      8 // decimals
+    );
+    console.log(`mint: ${mintPubkey.toBase58()}`);
+    collectionQuoteMint = mintPubkey;
+
+    const x = await provider.connection.getBalance(poolCreator.publicKey);
+    console.log("pool creator bal: " + x.toString());
   });
 
   it("Mint an MCC verified collection", async () => {
-    // create collection of NFTs
-    // NOTE: The protocol authority is the owner of the collection
+    // create collection of 5 NFTs
+    // NOTE: The protocol authority is the owner of the collection, same owner of the PairAuthority account
     const collectionNftResponse = await metaplex
       .nfts()
       .create({
@@ -214,5 +232,135 @@ describe("nftamm", () => {
     // );
   });
 
-  it("initialize a pool", async () => {});
+  it("Initialize an NFT pair with a linear bonding curve", async () => {
+    const nftPairLinearCurve = anchor.web3.Keypair.generate();
+
+    const [quoteTokenVaultPubkey, quoteTokenVaultBump] =
+      await PublicKey.findProgramAddress(
+        [Buffer.from("quote"), nftPairLinearCurve.publicKey.toBuffer()],
+        program.programId
+      );
+
+    const [feeVaultPubkey, feeVaultBump] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("quote"),
+        Buffer.from("fee"),
+        nftPairLinearCurve.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+    const [programAsSignerPubkey, programAsSignerBump] =
+      await PublicKey.findProgramAddress(
+        [Buffer.from("program"), Buffer.from("signer")],
+        program.programId
+      );
+
+    const tx = await program.methods
+      .initializePair(1, 0, new anchor.BN(2), 0, new anchor.BN(100), false)
+      .accounts({
+        payer: poolCreator.publicKey,
+        pair: nftPairLinearCurve.publicKey,
+        pairAuthority: pairAuthorityAccount.publicKey,
+        nftCollectionMint: collectionNft.mintAddress,
+        nftCollectionMetadata: collectionNft.metadataAddress,
+        quoteTokenMint: collectionQuoteMint,
+        quoteTokenVault: quoteTokenVaultPubkey,
+        feeVault: feeVaultPubkey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TokenProgram.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        programAsSigner: programAsSignerPubkey,
+      })
+      .signers([poolCreator, nftPairLinearCurve])
+      .rpc();
+  });
+
+  it("Initialize a token pair with a linear bonding curve", async () => {
+    const nftPairLinearCurve = anchor.web3.Keypair.generate();
+
+    const [quoteTokenVaultPubkey, quoteTokenVaultBump] =
+      await PublicKey.findProgramAddress(
+        [Buffer.from("quote"), nftPairLinearCurve.publicKey.toBuffer()],
+        program.programId
+      );
+
+    const [feeVaultPubkey, feeVaultBump] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("quote"),
+        Buffer.from("fee"),
+        nftPairLinearCurve.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+    const [programAsSignerPubkey, programAsSignerBump] =
+      await PublicKey.findProgramAddress(
+        [Buffer.from("program"), Buffer.from("signer")],
+        program.programId
+      );
+
+    const tx = await program.methods
+      .initializePair(0, 0, new anchor.BN(2), 0, new anchor.BN(100), false)
+      .accounts({
+        payer: poolCreator.publicKey,
+        pair: nftPairLinearCurve.publicKey,
+        pairAuthority: pairAuthorityAccount.publicKey,
+        nftCollectionMint: collectionNft.mintAddress,
+        nftCollectionMetadata: collectionNft.metadataAddress,
+        quoteTokenMint: collectionQuoteMint,
+        quoteTokenVault: quoteTokenVaultPubkey,
+        feeVault: feeVaultPubkey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TokenProgram.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        programAsSigner: programAsSignerPubkey,
+      })
+      .signers([poolCreator, nftPairLinearCurve])
+      .rpc();
+  });
+
+  it("Initialize a trade pair with a linear bonding curve", async () => {
+    const nftPairLinearCurve = anchor.web3.Keypair.generate();
+
+    const [quoteTokenVaultPubkey, quoteTokenVaultBump] =
+      await PublicKey.findProgramAddress(
+        [Buffer.from("quote"), nftPairLinearCurve.publicKey.toBuffer()],
+        program.programId
+      );
+
+    const [feeVaultPubkey, feeVaultBump] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("quote"),
+        Buffer.from("fee"),
+        nftPairLinearCurve.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+    const [programAsSignerPubkey, programAsSignerBump] =
+      await PublicKey.findProgramAddress(
+        [Buffer.from("program"), Buffer.from("signer")],
+        program.programId
+      );
+
+    const tx = await program.methods
+      .initializePair(2, 0, new anchor.BN(2), 0, new anchor.BN(100), false)
+      .accounts({
+        payer: poolCreator.publicKey,
+        pair: nftPairLinearCurve.publicKey,
+        pairAuthority: pairAuthorityAccount.publicKey,
+        nftCollectionMint: collectionNft.mintAddress,
+        nftCollectionMetadata: collectionNft.metadataAddress,
+        quoteTokenMint: collectionQuoteMint,
+        quoteTokenVault: quoteTokenVaultPubkey,
+        feeVault: feeVaultPubkey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TokenProgram.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        programAsSigner: programAsSignerPubkey,
+      })
+      .signers([poolCreator, nftPairLinearCurve])
+      .rpc();
+  });
 });
